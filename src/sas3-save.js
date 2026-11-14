@@ -31,6 +31,14 @@ function integer(value, max = maxInt) {
 }
 
 function array(value, length, validate, nullable = false) {
+  if (nullable && value instanceof Map) {
+    const indexed = [];
+    for (const [key, item] of value) {
+      if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= length) throw new Error("Invalid SAS3 inventory index.");
+      indexed[Number(key)] = item;
+    }
+    value = indexed;
+  }
   if (!Array.isArray(value) || value.length > length) throw new Error("Invalid SAS3 inventory.");
   return Array.from(value, item => nullable && item == null ? null : validate(item));
 }

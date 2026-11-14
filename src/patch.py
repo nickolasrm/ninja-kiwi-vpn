@@ -35,6 +35,20 @@ def unpack_asar(archive, destination):
 
 def patch_client(archive, destination, maps):
     unpack_asar(archive, destination)
+    # Flash writes sparse arrays with both named indexes and a dense prefix.
+    # libamf stopped at the named terminator, leaving the dense values unread.
+    amf3 = destination / "node_modules/libamf/src/amf/AMF3.js"
+    replace_once(amf3, """                key = this.readString();
+            }
+
+            return map;""", """                key = this.readString();
+            }
+
+            for (let index = 0; index < (ref >> 1); index++) {
+                map.set(String(index), this.read());
+            }
+
+            return map;""")
     main = destination / "main.js"
     replace_once(main, 'let w=s.a.join(n.app.getPath("userData"),"flash","system",g)',
                  'let w=s.a.join(process.resourcesPath,"pepper",g)')

@@ -2,6 +2,8 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const zlib = require("zlib");
+const { flashFile } = require("../src/flash-sol");
 const { createProfiles, credentials, callProfile } = require("../src/profiles");
 const sas3 = require("../src/sas3-save");
 const sas4 = require("../src/sas4-save");
@@ -23,6 +25,16 @@ async function test() {
     assert.strictEqual(original.save, null);
     sas3.write(dir, null);
     const seed = sas3.read(dir);
+    const { SOL } = require("libamf");
+    const filename = "guest_SASZombieAssault3";
+    // Flash's ammo array has one dense entry and an associative entry for slot 9.
+    const sparse = Buffer.from("0a0b0109616d6d6f09030339047e010541dfffffffc0000001", "hex");
+    const sol = new SOL.LSO({ filename, version: 3, ud: {
+      gxp: 0, gcash: 0, gnum: 0, glevel: 0,
+      data: zlib.deflateSync(sparse).toString("base64"),
+    } });
+    fs.writeFileSync(flashFile(dir, "assets.nkstatic.com", filename + ".sol"), sol.write());
+    assert.deepStrictEqual(sas3.read(dir).ammo, [2147483647, null, null, null, null, null, null, null, null, 126]);
     const progress = { ...seed, xp: 1220, cash: 28 };
     const saved = await callProfile(endpoint, "save", { ...login, revision: original.revision, save: progress });
     await assert.rejects(callProfile(endpoint, "open", {
