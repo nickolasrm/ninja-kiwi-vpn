@@ -58,9 +58,21 @@
       <input id="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password">
     </div>
   </div>
+  <label id="accept-maps-row" hidden><input id="accept-maps" type="checkbox" style="width:auto"> Allow this host’s custom SAS3 maps</label>
   <p id="details"></p>
   <button id="play-button" type="submit">Host and play</button>
   <button id="manage" class="secondary" type="button">Manage host profiles</button>
+  <button id="manage-mods" class="secondary" type="button">Manage SAS3 mods</button>
+</form>
+<form id="mods" hidden>
+  <fieldset>
+    <legend>SAS3 mods</legend>
+    <div id="mod-list" class="weapons"></div>
+  </fieldset>
+  <p>Changes apply the next time you host SAS3.</p>
+  <button type="submit">Save enabled mods</button>
+  <button id="mods-folder" class="secondary" type="button">Open mods folder</button>
+  <button id="mods-back" class="secondary" type="button">Back to launcher</button>
 </form>
 <form id="admin" hidden>
   <label for="profiles">Player and game</label>

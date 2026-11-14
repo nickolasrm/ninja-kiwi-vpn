@@ -27,11 +27,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       : "Use the same name and profile password each time you play on this host.";
     button.textContent = hosting ? "Host and play" : "Join and play";
     get("manage").hidden = !hosting;
+    get("manage-mods").hidden = !hosting || game.value !== "sas3";
+    get("accept-maps-row").hidden = hosting || game.value !== "sas3";
     if (hosting) ip.setAttribute("list", "addresses");
     else ip.removeAttribute("list");
   }
 
   mode.addEventListener("change", updateMode);
+  game.addEventListener("change", updateMode);
   ipcRenderer.on("profiles-status", (_, text) => { status.textContent = text; });
   updateMode();
 
@@ -43,6 +46,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       status.textContent = await ipcRenderer.invoke("vpn-play", {
         game: game.value, mode: mode.value, ip: ip.value.trim(),
         name: get("player").value.trim(), password: get("password").value,
+        acceptMaps: get("accept-maps").checked,
       });
     } catch (error) {
       showError(error);
@@ -119,6 +123,44 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   get("manage").addEventListener("click", openAdmin);
 
+  const mods = get("mods");
+  const modList = get("mod-list");
+  function showMods(entries) {
+    modList.textContent = "";
+    for (const mod of entries) {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = mod.id;
+      checkbox.checked = mod.enabled;
+      checkbox.disabled = Boolean(mod.error);
+      label.append(checkbox, mod.name + (mod.error ? " · " + mod.error : ""));
+      modList.append(label);
+    }
+  }
+  get("manage-mods").addEventListener("click", async () => {
+    try {
+      showMods(await ipcRenderer.invoke("sas3-mods-list"));
+      form.hidden = true;
+      mods.hidden = false;
+      status.textContent = "";
+    } catch (error) { showError(error); }
+  });
+  mods.addEventListener("submit", async event => {
+    event.preventDefault();
+    try {
+      const ids = [...modList.querySelectorAll("input:checked")].map(input => input.value);
+      showMods(await ipcRenderer.invoke("sas3-mods-save", ids));
+      status.textContent = "Saved. Host SAS3 to use this mod selection.";
+    } catch (error) { showError(error); }
+  });
+  get("mods-folder").addEventListener("click", () => ipcRenderer.invoke("sas3-mods-folder"));
+  get("mods-back").addEventListener("click", () => {
+    mods.hidden = true;
+    form.hidden = false;
+    status.textContent = "";
+    get("manage-mods").focus();
+  });
   get("back").addEventListener("click", () => {
     admin.hidden = true;
     form.hidden = false;

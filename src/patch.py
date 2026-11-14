@@ -87,7 +87,18 @@ try {
     })),
     {regex:''')
     # The old SAS3 host is gone. Route both its HTTP and HTTPS map requests to the local copies.
-    replace_once(main, 'if(e.game,0)return;if(', 'if(')
+    replace_once(main, 'async function openGameWindow(e){if(e.game,0)return;if(', '''
+let activeSas3Assets;
+async function openGameWindow(e, mods){
+  activeSas3Assets = null;
+  if (e.game === "sas3" && mods) {
+    const modding = require("./sas3-mods.js");
+    activeSas3Assets = new Map(mods.maps.map(map => [modding.maps[map.slot - 1] + ".swf", map.data]));
+    if (mods.weapons.length) {
+      activeSas3Assets.set("sas3.swf", modding.patchWeapon(fs.readFileSync(path.join(__dirname, "swfs", "sas3.swf")), mods.weapons));
+    }
+  }
+if(''')
     replace_once(main, 'if(np){', r'''if (request.url.startsWith("https://assets.nkstatic.com/nk-vpn-data/")) {
   const asset = "9a0a8254da299947492b4e1eb15291f1.json";
   if (request.method === "GET" && new URL(request.url).pathname === "/nk-vpn-data/" + asset) {
@@ -96,6 +107,8 @@ try {
   return callback({ error: -6 });
 }
 const oldMap = /^https:\/\/sas3maps\.ninjakiwi\.com\/sas3maps\/(\w+\.swf)(?:\?|$)/.exec(request.url);
+const replacement = activeSas3Assets && activeSas3Assets.get(oldMap ? oldMap[1] : np && np[0]);
+if (replacement) return callback({ mimeType: "application/x-shockwave-flash", data: replacement });
 if (oldMap && fs.existsSync(path.join(__dirname, "swfs", oldMap[1]))) {
   return callback({mimeType: "application/x-shockwave-flash", data: fs.readFileSync(path.join(__dirname, "swfs", oldMap[1]))});
 }
@@ -117,6 +130,16 @@ if(np){''')
 def patch_server(root):
     flash = root / "src/java/xyz/hydar/flash"
     launcher = flash / "FlashLauncher.java"
+    sas3 = flash / "S3Server.java"
+    replace_once(sas3, 'hp = (int)(type.hp *',
+                 'hp = (int)(Integer.parseInt(S3Server.setting(type, "hp", type.hp)) *')
+    replace_once(sas3, 'return z1.type.xp;',
+                 'return Integer.parseInt(S3Server.setting(z1.type, "xp", z1.type.xp));')
+    replace_once(sas3, 'public class S3Server extends ServerContext {', '''
+public class S3Server extends ServerContext {
+    static String setting(ZombieType type, String field, int fallback) {
+        return CONFIG.cfg.getOrDefault("SAS3.mod." + type.name() + "." + field, Integer.toString(fallback));
+    }''')
     # Each game port serves Flash's socket policy, so the launcher can host without root on Linux.
     text = launcher.read_text()
     start = text.index('\t\tSystem.out.println("Please ensure port 843')

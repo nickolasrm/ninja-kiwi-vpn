@@ -1,4 +1,4 @@
-const { app, ipcMain } = require("electron");
+const { app, ipcMain, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const net = require("net");
@@ -6,6 +6,7 @@ const os = require("os");
 const path = require("path");
 const { createProfiles, credentials, callProfile } = require("./profiles");
 const { atomicWrite } = require("./flash-sol");
+const { createMods, downloadMap, equipWeapons, serverSettings } = require("./sas3-mods");
 const adapters = {
   sas3: require("./sas3-save"),
   countersnipe: require("./countersnipe-save"),
@@ -49,7 +50,9 @@ module.exports = (window, openGame) => {
   let gameWindow;
   let syncing = false;
   const profileDirectory = app.getPath("userData");
-  const profiles = createProfiles(profileDirectory, adapters);
+  const mods = createMods(profileDirectory);
+  let hostedMods;
+  const profiles = createProfiles(profileDirectory, adapters, () => hostedMods);
   let closing = false;
   window.on("close", event => {
     if (closing) return;
@@ -92,6 +95,29 @@ module.exports = (window, openGame) => {
     if (event.sender === window.webContents) return profiles.update(fields);
   });
 
+  ipcMain.handle("sas3-mods-list", event => {
+    if (event.sender === window.webContents) return mods.list();
+  });
+  ipcMain.handle("sas3-mods-folder", event => {
+    if (event.sender === window.webContents) shell.openItem(mods.directory);
+  });
+  ipcMain.handle("sas3-mods-save", async (event, ids) => {
+    if (event.sender !== window.webContents) return;
+    if (busy || syncing || gameWindow) throw new Error("Close the game and let it save before changing mods.");
+    busy = true;
+    try {
+      mods.enable(ids);
+      if (serverKey && serverKey.startsWith("sas3:")) {
+        profiles.close();
+        hostedMods = undefined;
+        await stopServer();
+      }
+      return mods.list();
+    } finally {
+      busy = false;
+    }
+  });
+
   ipcMain.handle("vpn-play", async (event, selection) => {
     if (event.sender !== window.webContents || busy) return;
     if (gameWindow || syncing) throw new Error("Close the game and wait for the profile to save before starting another.");
@@ -114,11 +140,12 @@ module.exports = (window, openGame) => {
         if (server) await stopServer();
       }
       if (key && !server) {
+        hostedMods = game === "sas3" ? mods.snapshot() : null;
         const resources = process.resourcesPath;
         const workDir = path.join(resources, "multiplayer");
         const java = path.join(resources, "java", "bin", process.platform === "win32" ? "java.exe" : "java");
         const config = path.join(app.getPath("userData"), "flash.properties");
-        fs.writeFileSync(config, "HOST=" + ip + "\n");
+        fs.writeFileSync(config, "HOST=" + ip + "\n" + (hostedMods ? serverSettings(hostedMods) : ""));
         await new Promise((resolve, reject) => {
           const child = spawn(java, ["-jar", path.join(workDir, "server.jar"), config, gameServer, String(port)], {
             cwd: workDir,
@@ -204,12 +231,20 @@ module.exports = (window, openGame) => {
         if (payload.save) atomicWrite(path.join(profileDirectory, game + "-legacy-backup.json"), JSON.stringify(payload.save));
       }
       const loaded = await callProfile(ip, "open", payload);
-      adapter.write(profileDirectory, loaded.save);
+      if (loaded.mods && loaded.mods.maps.length && !key && selection.acceptMaps !== true) {
+        throw new Error("This host uses custom SAS3 maps. Enable the custom map option if you trust the host.");
+      }
+      const gameMods = loaded.mods && {
+        ...loaded.mods, maps: await Promise.all(loaded.mods.maps.map(async slot => ({ slot, data: await downloadMap(ip, slot) }))),
+      };
+      const sessionSave = gameMods && gameMods.weapons.length
+        ? equipWeapons(loaded.save || adapter.freshSave, gameMods.weapons) : loaded.save;
+      adapter.write(profileDirectory, sessionSave);
       // Compare with what Flash will see, including defaults written for a new save.
       const initial = adapter.read(profileDirectory);
       atomicWrite(importMarker, "1");
       atomicWrite(checkpoint, JSON.stringify({ ip, name: account.name, revision: loaded.revision, initial }));
-      gameWindow = await openGame(global.gameData[game]);
+      gameWindow = await openGame(global.gameData[game], gameMods);
       gameWindow.on("closed", async () => {
         gameWindow = undefined;
         syncing = true;
@@ -230,6 +265,7 @@ module.exports = (window, openGame) => {
         }
       });
       if (restoredConflict) return "Loaded the host’s updated profile. The previous local save was backed up.";
+      if (gameMods && gameMods.names.length) return "SAS3 mods active: " + gameMods.names.join(", ");
       return mode === "host" ? "Hosting at " + ip + ". Share this IP with your friends." : "Connected to " + ip + ".";
     } finally {
       busy = false;

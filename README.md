@@ -85,6 +85,8 @@ their next launch. If a profile changes while someone is playing, the newer
 host revision takes precedence and the launcher backs up the conflicting
 local save on the next connection.
 
+SAS4 guest mode keeps its built-in multiplayer restriction.
+
 Allow inbound TCP `8045` on the host's VPN interface for profile sync, in
 addition to the selected game's port. Use the launcher with peers you trust.
 Profile authentication and saves travel over the VPN, and the launcher uses
@@ -105,6 +107,50 @@ a separate password for these profiles.
    **Start now with these players**.
 
 ![SAS3 Onslaught lobby with both players in the squad and the button to start the match](docs/screenshots/sas3-lobby.png)
+
+## SAS3 mods
+
+With **Host** and **SAS3** selected, open **Manage SAS3 mods**, enable
+**Thunder Gun**, then click **Save enabled mods**. Start a new host session.
+Everyone joining with the mod-capable builds gets the host's weapon settings.
+The Thunder Gun uses the C.A.W. slot and artwork. It has a two-shot magazine,
+higher damage, and greater penetration. The launcher equips it in the
+second slot when the player has room.
+
+![Thunder Gun equipped in the SAS3 loadout](docs/screenshots/sas3-thunder-gun.png)
+
+To make a mod, open **Manage SAS3 mods → Open mods folder** and add a JSON
+manifest. Map SWFs go beside it. Reopen the manager to see the new manifest.
+A manifest can contain any combination of these replacement entries.
+
+```json
+{
+  "name": "My SAS3 mod",
+  "weapons": [
+    { "slot": 37, "name": "Thunder Gun", "damage": 9500, "magazine": 2, "penetration": 30 }
+  ],
+  "maps": [
+    { "slot": 1, "file": "MyFarmhouse.swf" }
+  ],
+  "enemies": [
+    { "type": 0, "health": 300, "xp": 20 }
+  ]
+}
+```
+
+- Weapon slot `37` is the C.A.W. The weapon name can contain up to 14 printable
+  ASCII characters in-game. The existing weapon's animation and ammo type are used.
+- Map slots `1–5` are Farmhouse, Airbase, Karnivale, Verdammtenstadt, and Black
+  Isle. The replacement SWF must implement the original map's interface and
+  keep compatible spawn and power-up indexes. Each file can be up to 4 MiB.
+  Friends must enable **Allow this host’s custom SAS3 maps** to download them.
+  Only enable this for hosts whose SWFs you trust.
+- Enemy IDs `0–12` are Swarmer, Runner, Choker, Bloater, Shadow, Mamushka,
+  Mamushka 2–4, Devastator, Skeleton, Worm, and Nest. Mods set co-op health
+  and kill XP for those types. The game still uses their original models and AI.
+
+Mods replace existing slots. Two enabled mods may not target the same slot.
+Everyone needs the mod-capable launcher to join a modded match.
 
 ## Troubleshooting
 

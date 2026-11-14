@@ -37,7 +37,7 @@ function readJSON(stream) {
   });
 }
 
-function createProfiles(directory, adapters) {
+function createProfiles(directory, adapters, activeMods = () => null) {
   const file = path.join(directory, "player-profiles.json");
   const players = new Map(fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : []);
   let server;
@@ -98,7 +98,11 @@ function createProfiles(directory, adapters) {
       profile = { revision: revision + 1, save: adapter.validate(save) };
       store(id, { ...player, games: { ...player.games, [game]: profile } });
     }
-    return profile;
+    return operation === "/open" && game === "sas3"
+      ? { ...profile, mods: activeMods() && {
+        weapons: activeMods().weapons, names: activeMods().names,
+        maps: activeMods().maps.map(map => map.slot),
+      } } : profile;
   }
 
   return {
@@ -110,6 +114,14 @@ function createProfiles(directory, adapters) {
       if (server) return;
       const instance = http.createServer(async (request, response) => {
         request.setTimeout(5000, () => request.destroy());
+        const map = request.method === "GET" && /^\/sas3-map\/([1-5])$/.exec(request.url);
+        if (map) {
+          const mods = activeMods();
+          const asset = mods && mods.maps.find(item => item.slot === Number(map[1]));
+          if (!asset) response.writeHead(404).end();
+          else response.writeHead(200, { "Content-Type": "application/x-shockwave-flash" }).end(asset.data);
+          return;
+        }
         if (request.method !== "POST" || !["/open", "/save"].includes(request.url)) {
           response.writeHead(404).end();
           return;
