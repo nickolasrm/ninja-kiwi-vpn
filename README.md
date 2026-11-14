@@ -110,28 +110,37 @@ a separate password for these profiles.
 
 ## SAS3 mods
 
-With **Host** and **SAS3** selected, open **Manage SAS3 mods**, enable
-**Thunder Gun**, then click **Save enabled mods**. Start a new host session.
-Use v1.3.0 or newer on the host and each player's computer. In SAS3, open
-**Play → Buy → Premium → Special → Thunder Gun**. At rank 20, it costs
-$50,000 in game cash and comes with 100 rounds. Put it in a weapon slot from
-**Equip**. Players who already received the weapon in v1.2.0 keep it.
+Download `Thunder-Gun-SAS3.zip` from the [latest release](https://github.com/nickolasrm/ninja-kiwi-vpn/releases/latest).
+With **Host** and **SAS3** selected, open **Manage SAS3 mods → Open mods folder**.
+Extract the `thunder-gun` directory there so the mods folder contains
+`thunder-gun/mod.json`. Reopen the manager, enable **Thunder Gun**, and
+click **Save enabled mods**. Launch a SAS3 host session. The old enabled
+selection carries over when the folder is installed. SAS3 profile inventories
+carry over normally.
 
-The Thunder Gun fires a short, widening pressure wave. It hits multiple
-zombies in front of you, pushes them away, and loses damage with distance.
-Walls block the blast. The mod includes new Armory and in-game artwork.
+Friends need launcher v1.4.0 or newer. On **Join**, check **Allow this host's
+custom SAS3 files**. The host sends the patched Flash game and any enabled
+maps. Only the host needs to install the mod folder.
+
+In SAS3, open **Play → Buy → Premium → Special → Thunder Gun**.
+At rank 20, it costs $50,000 in game cash and comes with 100 rounds.
+The two-shot cannon pushes back zombies in a widening cone.
 
 ![Thunder Gun in the SAS3 Armory](docs/screenshots/sas3-thunder-gun.png)
 
-To make a mod, open **Manage SAS3 mods → Open mods folder** and add a JSON
-manifest. Map SWFs go beside it. Reopen the manager to see the new manifest.
-A manifest can contain any combination of these replacement entries.
+### Make a SAS3 mod
+
+Create a subdirectory in `sas3-mods` with a `mod.json` file. Reopen the
+manager to discover it. Edit files while the game is closed. The next host
+launch reads the current files and restarts the SAS3 server when the resulting
+mod assets or settings change.
 
 ```json
 {
+  "apiVersion": 1,
   "name": "My SAS3 mod",
   "weapons": [
-    { "slot": 37, "name": "Thunder Gun", "damage": 9500, "magazine": 2, "penetration": 30, "effect": "thunder" }
+    { "slot": 37, "name": "My Cannon", "damage": 9500, "magazine": 2, "penetration": 30 }
   ],
   "maps": [
     { "slot": 1, "file": "MyFarmhouse.swf" }
@@ -142,20 +151,29 @@ A manifest can contain any combination of these replacement entries.
 }
 ```
 
-- Weapon slot `37` is the C.A.W. The weapon name can contain up to 14 printable
-  ASCII characters in-game. Stat-only replacements use the existing animation and ammo. Set
-  `"effect": "thunder"` to use the bundled cash purchase, artwork, and blast behavior.
-- Map slots `1–5` are Farmhouse, Airbase, Karnivale, Verdammtenstadt, and Black
-  Isle. The replacement SWF must implement the original map's interface and
-  keep compatible spawn and power-up indexes. Each file can be up to 4 MiB.
-  Friends must enable **Allow this host’s custom SAS3 maps** to download them.
-  Only enable this for hosts whose SWFs you trust.
-- Enemy IDs `0–12` are Swarmer, Runner, Choker, Bloater, Shadow, Mamushka,
-  Mamushka 2–4, Devastator, Skeleton, Worm, and Nest. Mods set co-op health
-  and kill XP for those types. The game still uses their original models and AI.
+- `weapons` changes existing slot `37` (the C.A.W.). Names can contain up to
+  14 printable ASCII characters in-game. Set `"grant": false` to leave purchases
+  and loadouts to the game.
+- `maps` replaces existing slots `1–5` (Farmhouse, Airbase, Karnivale,
+  Verdammtenstadt, and Black Isle). Put the replacement SWF beside the manifest.
+  Each file can be up to 4 MiB and must implement the original map interface.
+- `enemies` sets co-op health and kill XP for existing types `0–12`: Swarmer,
+  Runner, Choker, Bloater, Shadow, Mamushka 1–4, Devastator, Skeleton, Worm, and
+  Nest. A client patch can also replace Flash artwork and behavior.
 
-Mods replace existing slots. Two enabled mods may not target the same slot.
-Everyone needs the mod-capable launcher to join a modded match.
+Set `"client": "client.js"` in the manifest to include custom gameplay or
+artwork. The file exports a synchronous CommonJS function
+`(swf, { weapons }) => patchedSwf`. It receives an SAS3 v5.2 SWF as a Node
+`Buffer`, with weapon stats already applied, and returns a valid SWF
+`Buffer`. The [Thunder Gun source](mods/thunder-gun) shows how to change
+firing behavior, purchase logic, and Flash artwork. Client patches run in
+folder-name order and must be compatible with any other enabled patches.
+Enable scripted mods from authors you trust, since their JavaScript runs
+locally with the launcher's permissions.
+
+Existing loose JSON manifests for weapons, map replacements, and enemy stats
+are also supported. Each weapon, map, or enemy slot can be claimed by one
+enabled mod.
 
 ## Troubleshooting
 

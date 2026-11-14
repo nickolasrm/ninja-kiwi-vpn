@@ -108,7 +108,9 @@ async function openGameWindow(e, mods){
   if (e.game === "sas3" && mods) {
     const modding = require("./sas3-mods.js");
     activeSas3Assets = new Map(mods.maps.map(map => [modding.maps[map.slot - 1] + ".swf", map.data]));
-    if (mods.weapons.length) {
+    if (mods.client) {
+      activeSas3Assets.set("sas3.swf", mods.client);
+    } else if (mods.weapons.length) {
       activeSas3Assets.set("sas3.swf", modding.patchWeapon(fs.readFileSync(path.join(__dirname, "swfs", "sas3.swf")), mods.weapons));
     }
   }

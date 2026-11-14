@@ -6,7 +6,8 @@ const os = require("os");
 const path = require("path");
 const { createProfiles, credentials, callProfile } = require("./profiles");
 const { atomicWrite } = require("./flash-sol");
-const { createMods, downloadMap, equipWeapons, serverSettings } = require("./sas3-mods");
+const { createMods, downloadAsset, equipWeapons, serverSettings } = require("./sas3-mods");
+const { isDeepStrictEqual } = require("util");
 const adapters = {
   sas3: require("./sas3-save"),
   countersnipe: require("./countersnipe-save"),
@@ -135,12 +136,13 @@ module.exports = (window, openGame) => {
     const adapter = adapters[game];
     busy = true;
     try {
-      if (serverKey !== key) {
+      const nextMods = key && game === "sas3" ? mods.snapshot() : null;
+      if (serverKey !== key || key && !isDeepStrictEqual(nextMods, hostedMods)) {
         profiles.close();
         if (server) await stopServer();
       }
       if (key && !server) {
-        hostedMods = game === "sas3" ? mods.snapshot() : null;
+        hostedMods = nextMods;
         const resources = process.resourcesPath;
         const workDir = path.join(resources, "multiplayer");
         const java = path.join(resources, "java", "bin", process.platform === "win32" ? "java.exe" : "java");
@@ -231,11 +233,17 @@ module.exports = (window, openGame) => {
         if (payload.save) atomicWrite(path.join(profileDirectory, game + "-legacy-backup.json"), JSON.stringify(payload.save));
       }
       const loaded = await callProfile(ip, "open", payload);
-      if (loaded.mods && loaded.mods.maps.length && !key && selection.acceptMaps !== true) {
-        throw new Error("This host uses custom SAS3 maps. Enable the custom map option if you trust the host.");
+      const remoteMods = loaded.mods;
+      if (remoteMods && remoteMods.weapons.some(weapon => weapon.effect !== undefined) && !remoteMods.clientHash) {
+        throw new Error("This host uses the old Thunder Gun. Ask the host to update and install the Thunder Gun mod folder.");
       }
-      const gameMods = loaded.mods && {
-        ...loaded.mods, maps: await Promise.all(loaded.mods.maps.map(async slot => ({ slot, data: await downloadMap(ip, slot) }))),
+      if (remoteMods && (remoteMods.clientHash || remoteMods.maps.length) && !key && selection.acceptMaps !== true) {
+        throw new Error("This host uses custom SAS3 files. Allow them in the launcher if you trust the host.");
+      }
+      const gameMods = key ? hostedMods : remoteMods && {
+        ...remoteMods,
+        client: remoteMods.clientHash ? await downloadAsset(ip, undefined, remoteMods.clientHash) : undefined,
+        maps: await Promise.all(remoteMods.maps.map(async slot => ({ slot, data: await downloadAsset(ip, slot) }))),
       };
       const sessionSave = gameMods && gameMods.weapons.length
         ? equipWeapons(loaded.save || adapter.freshSave, gameMods.weapons) : loaded.save;

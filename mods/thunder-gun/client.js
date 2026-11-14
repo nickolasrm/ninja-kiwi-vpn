@@ -1,4 +1,5 @@
-const { replaceArt } = require("./sas3-thunder-art");
+const zlib = require("zlib");
+const { replaceArt } = require("./art");
 
 // AVM2 operands for the SAS3 5.2 DoABC tag. The original client is pinned by build.sh.
 const fields = {
@@ -191,4 +192,18 @@ function patchThunder(body, magazine) {
   return Buffer.concat(tags);
 }
 
-module.exports = { patchThunder };
+module.exports = (swf, { weapons: [weapon] }) => {
+  const body = zlib.inflateSync(swf.slice(8));
+  // Set the Armory price to the stock 50,000 uint constant.
+  const constructor = Buffer.from("5ef6025d21240025", "hex");
+  const offset = body.indexOf(constructor);
+  if (offset < 0 || body.indexOf(constructor, offset + 1) !== -1) {
+    throw new Error("Unexpected SAS3 Thunder Gun price location.");
+  }
+  body[offset + 5] = 0x2e;
+  body[offset + 6] = 0x20;
+  const patched = patchThunder(body, weapon.magazine);
+  const header = Buffer.from(swf.slice(0, 8));
+  header.writeUInt32LE(patched.length + 8, 4);
+  return Buffer.concat([header, zlib.deflateSync(patched)]);
+};

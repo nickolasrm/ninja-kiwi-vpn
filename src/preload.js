@@ -134,7 +134,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       checkbox.value = mod.id;
       checkbox.checked = mod.enabled;
       checkbox.disabled = Boolean(mod.error);
-      label.append(checkbox, mod.name + (mod.error ? " · " + mod.error : ""));
+      label.append(checkbox, mod.name + (mod.error ? " · " + mod.error : mod.scripted ? " · Runs local mod code" : ""));
       modList.append(label);
     }
   }
