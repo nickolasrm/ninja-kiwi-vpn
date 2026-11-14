@@ -2,13 +2,14 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 const { atomicWrite } = require("./flash-sol");
+const { patchThunder } = require("./sas3-thunder");
 
 const maps = ["FarmhouseMap", "AirbaseMap", "KarnivaleMap", "VerdammtenstadtMap", "BlackIsleMap"];
 const enemies = ["SWARMER", "RUNNER", "CHOKER", "BLOATER", "SHADOW", "MAMUSHKA", "MAMUSHKA2", "MAMUSHKA3", "MAMUSHKA4", "DEVASTATOR", "SKELEMAN", "WORM", "NEST"];
 const example = {
   name: "Thunder Gun",
-  description: "A two-shot, high-impact blast cannon based on the SAS3 C.A.W.",
-  weapons: [{ slot: 37, name: "Thunder Gun", damage: 9500, magazine: 2, penetration: 30 }],
+  description: "A two-shot air cannon that hits and pushes zombies in a cone.",
+  weapons: [{ slot: 37, name: "Thunder Gun", damage: 9500, magazine: 2, penetration: 30, effect: "thunder" }],
 };
 
 function number(value, min, max) {
@@ -22,7 +23,7 @@ function name(value) {
 }
 
 function equipWeapons(save, replacements) {
-  if (!replacements.length) return save;
+  if (!replacements.length || replacements[0].effect === "thunder") return save;
   const { slot } = replacements[0];
   const ammo = [...save.ammo];
   ammo[9] = Math.max(ammo[9] || 0, 40);
@@ -36,6 +37,7 @@ function validate(mod) {
     slot: number(weapon.slot, 37, 37), name: name(weapon.name),
     damage: number(weapon.damage, 1, 16383), magazine: number(weapon.magazine, 1, 127),
     penetration: number(weapon.penetration, 1, 127),
+    ...(weapon.effect === "thunder" ? { effect: "thunder" } : {}),
   }));
   const enemies = (mod.enemies || []).map(enemy => ({
     type: number(enemy.type, 0, 12), health: number(enemy.health, 1, 200000),
@@ -66,7 +68,13 @@ function createMods(profile) {
     const current = enabled();
     return fs.readdirSync(directory).filter(file => /^[\w.-]+\.json$/.test(file)).sort().map(id => {
       try {
-        const mod = validate(JSON.parse(fs.readFileSync(path.join(directory, id), "utf8")));
+        const manifest = JSON.parse(fs.readFileSync(path.join(directory, id), "utf8"));
+        // Upgrade the original bundled manifest while preserving locally chosen stats.
+        if (id === "thunder-gun.json" && manifest.name === "Thunder Gun" && Array.isArray(manifest.weapons)) {
+          manifest.weapons = manifest.weapons.map(weapon => weapon.name === "Thunder Gun"
+            ? { ...weapon, effect: "thunder" } : weapon);
+        }
+        const mod = validate(manifest);
         return { id, ...mod, enabled: current.includes(id) };
       } catch (error) {
         return { id, name: id, error: error.message };
@@ -129,7 +137,15 @@ function patchWeapon(swf, replacements) {
   const label = body.indexOf(prefix);
   if (label < 0) throw new Error("Unexpected SAS3 weapon label.");
   body.write(weapon.name.slice(0, original.length).padEnd(original.length), label + 1, original.length, "ascii");
-  return Buffer.concat([swf.slice(0, 8), zlib.deflateSync(body)]);
+  // Slot 37's cash price uses the existing 50,000 uint constant.
+  if (weapon.effect === "thunder") {
+    body[offset + 5] = 0x2e;
+    body[offset + 6] = 0x20;
+  }
+  const patched = weapon.effect === "thunder" ? patchThunder(body, weapon.magazine) : body;
+  const header = Buffer.from(swf.slice(0, 8));
+  header.writeUInt32LE(patched.length + 8, 4);
+  return Buffer.concat([header, zlib.deflateSync(patched)]);
 }
 
 function serverSettings(mods) {

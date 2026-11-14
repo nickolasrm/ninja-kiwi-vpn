@@ -112,12 +112,16 @@ a separate password for these profiles.
 
 With **Host** and **SAS3** selected, open **Manage SAS3 mods**, enable
 **Thunder Gun**, then click **Save enabled mods**. Start a new host session.
-Everyone joining with the mod-capable builds gets the host's weapon settings.
-The Thunder Gun uses the C.A.W. slot and artwork. It has a two-shot magazine,
-higher damage, and greater penetration. The launcher equips it in the
-second slot when the player has room.
+Use v1.3.0 or newer on the host and each player's computer. In SAS3, open
+**Play → Buy → Premium → Special → Thunder Gun**. At rank 20, it costs
+$50,000 in game cash and comes with 100 rounds. Put it in a weapon slot from
+**Equip**. Players who already received the weapon in v1.2.0 keep it.
 
-![Thunder Gun equipped in the SAS3 loadout](docs/screenshots/sas3-thunder-gun.png)
+The Thunder Gun fires a short, widening pressure wave. It hits multiple
+zombies in front of you, pushes them away, and loses damage with distance.
+Walls block the blast. The mod includes new Armory and in-game artwork.
+
+![Thunder Gun in the SAS3 Armory](docs/screenshots/sas3-thunder-gun.png)
 
 To make a mod, open **Manage SAS3 mods → Open mods folder** and add a JSON
 manifest. Map SWFs go beside it. Reopen the manager to see the new manifest.
@@ -127,7 +131,7 @@ A manifest can contain any combination of these replacement entries.
 {
   "name": "My SAS3 mod",
   "weapons": [
-    { "slot": 37, "name": "Thunder Gun", "damage": 9500, "magazine": 2, "penetration": 30 }
+    { "slot": 37, "name": "Thunder Gun", "damage": 9500, "magazine": 2, "penetration": 30, "effect": "thunder" }
   ],
   "maps": [
     { "slot": 1, "file": "MyFarmhouse.swf" }
@@ -139,7 +143,8 @@ A manifest can contain any combination of these replacement entries.
 ```
 
 - Weapon slot `37` is the C.A.W. The weapon name can contain up to 14 printable
-  ASCII characters in-game. The existing weapon's animation and ammo type are used.
+  ASCII characters in-game. Stat-only replacements use the existing animation and ammo. Set
+  `"effect": "thunder"` to use the bundled cash purchase, artwork, and blast behavior.
 - Map slots `1–5` are Farmhouse, Airbase, Karnivale, Verdammtenstadt, and Black
   Isle. The replacement SWF must implement the original map's interface and
   keep compatible spawn and power-up indexes. Each file can be up to 4 MiB.

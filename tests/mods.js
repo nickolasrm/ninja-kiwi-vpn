@@ -13,7 +13,15 @@ try {
   mods.enable(["thunder-gun.json"]);
   const { weapons, names } = createMods(temporary).snapshot();
   assert.deepStrictEqual(names, ["Thunder Gun"]);
-  const loadout = equipWeapons(freshSave, weapons);
+  assert.strictEqual(weapons[0].effect, "thunder");
+  const manifest = path.join(mods.directory, "thunder-gun.json");
+  const oldManifest = JSON.parse(fs.readFileSync(manifest, "utf8"));
+  delete oldManifest.weapons[0].effect;
+  fs.writeFileSync(manifest, JSON.stringify(oldManifest));
+  assert.deepStrictEqual(createMods(temporary).snapshot().weapons, weapons);
+  assert.strictEqual(equipWeapons(freshSave, weapons), freshSave);
+  const { effect, ...statReplacement } = weapons[0];
+  const loadout = equipWeapons(freshSave, [statReplacement]);
   assert.strictEqual(loadout.hud[1], 37);
   assert.strictEqual(loadout.ammo[9], 40);
   assert.deepStrictEqual(freshSave.guns, [0]);
@@ -25,7 +33,8 @@ try {
     const swf = fs.readFileSync(process.argv[2]);
     const patch = patchWeapon(swf, weapons);
     const body = zlib.inflateSync(patch.slice(8));
-    assert.strictEqual(body.length, swf.readUInt32LE(4) - 8);
+    assert.strictEqual(body.length, patch.readUInt32LE(4) - 8);
+    assert.notStrictEqual(body.length, swf.readUInt32LE(4) - 8);
     assert(body.includes(Buffer.from("Thunder Gun")));
     assert.strictEqual(patchWeapon(swf, []), swf);
   }
