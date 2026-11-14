@@ -46,7 +46,7 @@ def patch_client(archive, destination, maps):
     text = main.read_text()
     text = text[:text.index(start)] + '''
 m = new n.BrowserWindow({
-  title: "Ninja Kiwi VPN", width: 550, height: 435, minWidth: 515, minHeight: 410,
+  title: "Ninja Kiwi VPN", width: 550, height: 620, minWidth: 515, minHeight: 520,
   backgroundColor: "#141613",
   webPreferences: { nodeIntegration: false, contextIsolation: true, preload: s.a.join(__dirname, "preload.js") }
 });
@@ -73,6 +73,7 @@ gameWindow.webContents.on("before-input-event", (event, input) => {
 });
 try {
   await gameWindow.loadURL(e.swfURL);
+  return gameWindow;
 } catch (error) {
   gameWindow.destroy();
   throw error;
@@ -87,7 +88,14 @@ try {
     {regex:''')
     # The old SAS3 host is gone. Route both its HTTP and HTTPS map requests to the local copies.
     replace_once(main, 'if(e.game,0)return;if(', 'if(')
-    replace_once(main, 'if(np){', r'''const oldMap = /^https:\/\/sas3maps\.ninjakiwi\.com\/sas3maps\/(\w+\.swf)(?:\?|$)/.exec(request.url);
+    replace_once(main, 'if(np){', r'''if (request.url.startsWith("https://assets.nkstatic.com/nk-vpn-data/")) {
+  const asset = "9a0a8254da299947492b4e1eb15291f1.json";
+  if (request.method === "GET" && new URL(request.url).pathname === "/nk-vpn-data/" + asset) {
+    return callback({ mimeType: "application/octet-stream", data: fs.readFileSync(path.join(__dirname, "swfs", asset)) });
+  }
+  return callback({ error: -6 });
+}
+const oldMap = /^https:\/\/sas3maps\.ninjakiwi\.com\/sas3maps\/(\w+\.swf)(?:\?|$)/.exec(request.url);
 if (oldMap && fs.existsSync(path.join(__dirname, "swfs", oldMap[1]))) {
   return callback({mimeType: "application/x-shockwave-flash", data: fs.readFileSync(path.join(__dirname, "swfs", oldMap[1]))});
 }
@@ -97,8 +105,9 @@ if(np){''')
                  '"http://ninjakiwi.com/*","http://sas3maps.ninjakiwi.com/*"]},((e,t)=>{t(e.url.startsWith("http://ninjakiwi.com/") || e.url.startsWith("http://sas3maps.ninjakiwi.com/") ? {redirectURL:e.url.replace("http://","https://")}')
     for asset in maps.glob("*.swf"):
         shutil.copy2(asset, destination / "swfs")
-    for name in ("start.js", "launcher.js", "preload.js", "launcher.html"):
-        shutil.copy2(Path(__file__).parent / name, destination)
+    sources = Path(__file__).parent
+    for file in [*sources.glob("*.js"), sources / "launcher.html"]:
+        shutil.copy2(file, destination)
     manifest = destination / "package.json"
     package = json.loads(manifest.read_bytes())
     package.update(main="start.js", productName="Ninja Kiwi VPN")

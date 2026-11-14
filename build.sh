@@ -8,7 +8,6 @@ if [[ $# != 2 ]]; then
 fi
 inputs=$(realpath "$1")
 archive_resources=$(realpath "$2")
-repo=$(pwd)
 mkdir -p dist
 build=$(mktemp -d)
 trap 'rm -rf -- "$build"' EXIT
@@ -20,6 +19,7 @@ if [[ $(git -C "$inputs/FlashPrivateServer" rev-parse HEAD) != dea193d18d00fa6e3
 fi
 unzip -p "$inputs/app.zip" app.asar > "$build/app.asar"
 python3 src/patch.py client "$build/app.asar" "$build/app" "$inputs/maps"
+cp "$inputs/FlashPrivateServer/bmc/src/webapp/9a0a8254da299947492b4e1eb15291f1.json" "$build/app/swfs/"
 cp -r "$inputs/FlashPrivateServer/src" "$build/server"
 mkdir "$build/classes" "$build/multiplayer"
 cp "$inputs/FlashPrivateServer/"{LICENSE,sas4_bot.bin,sas4_deadtab.bin,sas4_vs.bin} "$build/multiplayer"
@@ -51,8 +51,7 @@ install -m 755 src/AppRun "$linux/AppRun"
 cp src/ninja-kiwi-vpn.desktop "$linux/"
 cp "$archive_resources/src/static/img/icon/icon_256@1x.png" "$linux/ninja-kiwi-vpn.png"
 ARCH=x86_64 "$inputs/appimagetool/AppRun" --no-appstream --runtime-file "$inputs/runtime-x86_64" \
-  --mksquashfs-opt -processors --mksquashfs-opt 4 "$linux" "$repo/dist/NinjaKiwiVPN-x86_64.AppImage"
-chmod +x dist/NinjaKiwiVPN-x86_64.AppImage
+  --mksquashfs-opt -processors --mksquashfs-opt 4 "$linux" "$build/NinjaKiwiVPN-x86_64.AppImage"
 
 win="$build/win"
 unzip -q "$inputs/jre-win.zip" -d "$build/jre-win"
@@ -73,8 +72,13 @@ version=$(sha256sum "$build/windows.zip")
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath \
   -ldflags="-s -w -H=windowsgui -X main.payloadVersion=${version%% *}" \
   -o "$build/windows.exe" src/windows.go
-cat "$build/windows.exe" "$build/windows.zip" > dist/NinjaKiwiVPN-x64.exe
+cat "$build/windows.exe" "$build/windows.zip" > "$build/NinjaKiwiVPN-x64.exe"
+staging=$(mktemp -d dist/.build-XXXXXXXX)
+trap 'rm -rf -- "$build" "$staging"' EXIT
+install -m 755 "$build/NinjaKiwiVPN-x86_64.AppImage" "$staging/"
+install -m 644 "$build/NinjaKiwiVPN-x64.exe" "$staging/"
 (
-  cd dist
+  cd "$staging"
   sha256sum NinjaKiwiVPN-x86_64.AppImage NinjaKiwiVPN-x64.exe > SHA256SUMS
 )
+mv -f "$staging/"* dist/

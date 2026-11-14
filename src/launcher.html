@@ -19,10 +19,16 @@
   button:disabled { opacity: .65; cursor: wait; }
   p { color: #c1c8b8; line-height: 1.45; }
   #details { margin: 0 0 10px; min-height: 44px; }
+  [hidden] { display: none !important; }
+  .secondary { background: #242923; color: #eeefe8; border: 1px solid #535c4d; }
+  fieldset { border: 1px solid #535c4d; padding: 14px; margin: 0 0 12px; }
+  .weapons { max-height: 170px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .weapons label { font-weight: 400; margin: 0; }
+  .weapons input { width: auto; margin: 0 6px 0 0; }
   #status { margin: 12px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
 </style>
 <h1>Ninja Kiwi VPN</h1>
-<form>
+<form id="play">
   <div class="row">
     <div>
       <label for="mode">Multiplayer</label>
@@ -42,8 +48,27 @@
     <option value="bloonstd5">Bloons TD 5 Co-op</option>
     <option value="bloonstdbattles">Bloons TD Battles</option>
   </select>
+  <div class="row">
+    <div>
+      <label for="player">Player name</label>
+      <input id="player" required minlength="3" maxlength="24" autocomplete="username">
+    </div>
+    <div>
+      <label for="password">Profile password</label>
+      <input id="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password">
+    </div>
+  </div>
   <p id="details"></p>
-  <button type="submit">Host and play</button>
+  <button id="play-button" type="submit">Host and play</button>
+  <button id="manage" class="secondary" type="button">Manage host profiles</button>
+</form>
+<form id="admin" hidden>
+  <label for="profiles">Player and game</label>
+  <select id="profiles"></select>
+  <p id="admin-empty" hidden></p>
+  <div id="profile-fields"></div>
+  <button id="save-profile" type="submit">Save profile</button>
+  <button id="back" class="secondary" type="button">Back to launcher</button>
 </form>
 <p id="status" role="status"></p>
 </html>

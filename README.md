@@ -55,7 +55,42 @@ On the host, it is the address of their own VPN adapter.
 3. Copy the host's **managed IPv4 address** from the member list and share it
    for the game launcher. [ZeroTier quickstart](https://docs.zerotier.com/quickstart/)
 
-## 2. Host or join SAS3
+## 2. Create a player profile
+
+Use a name and a dedicated profile password of at least eight characters when
+you host or join. The same name and password restore your progress on that
+host. Use guest mode inside the Flash game. Close the game window and wait for
+the launcher to confirm the save before closing the launcher or disconnecting.
+
+The host stores profiles in `player-profiles.json` in its Ninja Kiwi VPN user
+data directory. Returning to the same host preserves your progress even if
+your own VPN IP changes. On first use, a local guest save can seed a new
+profile. The launcher captures a backup before importing it.
+
+### Manage host profiles
+
+Select **Host → Manage host profiles**, then choose a player and game. The
+panel can edit that game's fields after the game has produced a save.
+
+| Game | Editable profile fields |
+| --- | --- |
+| SAS3 | Rank, cash, owned weapons |
+| SAS4 | Character XP and cash |
+| Counter Snipe | Funds, wins, losses, and combat statistics |
+| Bloons TD 5 | XP and Monkey Money |
+| Bloons TD Battles | Medallions |
+
+Ask the player to close the game before editing. The changes take effect on
+their next launch. If a profile changes while someone is playing, the newer
+host revision takes precedence and the launcher backs up the conflicting
+local save on the next connection.
+
+Allow inbound TCP `8045` on the host's VPN interface for profile sync, in
+addition to the selected game's port. Use the launcher with peers you trust.
+Profile authentication and saves travel over the VPN, and the launcher uses
+a separate password for these profiles.
+
+## 3. Host or join SAS3
 
 | Host | Friends |
 | --- | --- |
@@ -83,8 +118,7 @@ On the host, it is the address of their own VPN adapter.
 - **The AppImage won't open.** Run
   `chmod +x NinjaKiwiVPN-x86_64.AppImage`. On systems without FUSE, run
   `./NinjaKiwiVPN-x86_64.AppImage --appimage-extract-and-run`.
-- **SAS3 asks for an online profile.** Use **Play as guest**. SAS3 guest
-  progress stays in the launcher's local Flash profile.
+- **SAS3 asks for an online profile.** Use **Play as guest**. The launcher syncs SAS3 guest progress to the selected host.
 
 ## Games and verification
 
