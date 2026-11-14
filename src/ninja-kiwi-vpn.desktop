@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Ninja Kiwi VPN
+Exec=AppRun
+Icon=ninja-kiwi-vpn
+Categories=Game;
+Terminal=false

@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+here="$(dirname "$(readlink -f "$0")")"
+# The 2020 Pepper sandbox crashes on current Linux kernels.
+exec "$here/electron" --no-sandbox "$@"

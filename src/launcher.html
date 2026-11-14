@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>Ninja Kiwi VPN</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 30px 38px; color: #eeefe8; background: #141613;
+    font: 15px system-ui, sans-serif; }
+  h1 { margin: 0 0 22px; font-size: 30px; letter-spacing: -.03em; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  label { display: block; margin: 0 0 6px; font-weight: 600; }
+  select, input, button { border-radius: 7px; font: inherit; }
+  input, select { width: 100%; padding: 11px; background: #242923; color: inherit;
+    border: 1px solid #535c4d; margin-bottom: 14px; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid #b9e171; outline-offset: 2px; }
+  button { width: 100%; border: 0; padding: 12px; margin-top: 6px; color: #142107;
+    background: #b9e171; font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: .65; cursor: wait; }
+  p { color: #c1c8b8; line-height: 1.45; }
+  #details { margin: 0 0 10px; min-height: 44px; }
+  #status { margin: 12px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+</style>
+<h1>Ninja Kiwi VPN</h1>
+<form>
+  <div class="row">
+    <div>
+      <label for="mode">Multiplayer</label>
+      <select id="mode"><option value="host">Host</option><option value="join">Join</option></select>
+    </div>
+    <div>
+      <label for="ip">Your VPN IPv4 address</label>
+      <input id="ip" required placeholder="25.10.20.30" autocomplete="off" maxlength="15">
+      <datalist id="addresses"></datalist>
+    </div>
+  </div>
+  <label for="game">Game</label>
+  <select id="game">
+    <option value="sas3">SAS: Zombie Assault 3</option>
+    <option value="countersnipe">Counter Snipe</option>
+    <option value="sas4">SAS: Zombie Assault 4</option>
+    <option value="bloonstd5">Bloons TD 5 Co-op</option>
+    <option value="bloonstdbattles">Bloons TD Battles</option>
+  </select>
+  <p id="details"></p>
+  <button type="submit">Host and play</button>
+</form>
+<p id="status" role="status"></p>
+</html>
