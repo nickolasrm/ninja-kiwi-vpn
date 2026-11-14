@@ -1,38 +1,112 @@
 # Ninja Kiwi VPN
 
-Open the [Linux AppImage](https://github.com/nickolasrm/ninja-kiwi-vpn/releases/latest/download/NinjaKiwiVPN-x86_64.AppImage) or
-[Windows executable](https://github.com/nickolasrm/ninja-kiwi-vpn/releases/latest/download/NinjaKiwiVPN-x64.exe) on an x86-64 desktop.
-The builds include Flash, Java and the game clients. The Windows executable unpacks
-into your local app cache on its first run.
+Play **SAS: Zombie Assault 3** co-op with friends on Linux and Windows. One
+person hosts from the launcher and everyone else joins using that person's VPN IP.
 
-## SAS: Zombie Assault 3
+![SAS3 co-op match with two players on the Farmhouse map](docs/screenshots/sas3-coop.png)
 
-1. Connect everyone to the same Hamachi or other VPN network.
-2. The host selects **Host**, enters their own VPN IPv4 address and clicks
-   **Host and play**. Leave that launcher open throughout the match.
-3. Everyone else selects **Join**, enters the host’s VPN IPv4 address and clicks
-   **Join and play**.
-4. In SAS3, choose **Play as guest** when the online-profile screen appears.
-   Then choose **Play → Start → Play co-op multi player**. Everyone selects the
-   same mode and clicks **Start new match**. Once everyone is in the lobby,
-   use **Start now with these players**.
+## Download
 
-SAS3 uses TCP 8044. If Join cannot reach the host, allow TCP 8044 on the host's
-VPN interface in the firewall. On Linux, mark the AppImage executable if your
-file manager asks. If FUSE is unavailable, run
-`./NinjaKiwiVPN-x86_64.AppImage --appimage-extract-and-run`.
+| Platform | x86-64 build | First launch |
+| --- | --- | --- |
+| Linux | [Download AppImage](https://github.com/nickolasrm/ninja-kiwi-vpn/releases/latest/download/NinjaKiwiVPN-x86_64.AppImage) | Mark it executable in your file manager, then open it. |
+| Windows | [Download EXE](https://github.com/nickolasrm/ninja-kiwi-vpn/releases/latest/download/NinjaKiwiVPN-x64.exe) | Double-click it. The first run unpacks the app into your local cache. |
 
-The picker also includes Counter Snipe, SAS4, Bloons TD 5 Co-op and Bloons TD
-Battles. These additional games have had launch smoke tests. The lobby ports are TCP 7988, 8124, 5577 and 4480 respectively.
-SAS4, BTD5 and Battles can also allocate match ports in the 8127–31999 range.
-The launcher uses its own local Flash profile. SAS3 guest progress stays local.
-The Linux build uses Electron's `--no-sandbox` switch for Pepper Flash compatibility.
+Both builds include the games, Flash, Java, and the multiplayer server. For
+remote play, install **one** of the VPNs below on every player's computer.
+For direct downloads from this private GitHub repository, players need repository access.
 
-## Build
+## 1. Connect over a VPN
+
+The **host's VPN IPv4 address** goes into the launcher on every computer.
+On the host, it is the address of their own VPN adapter.
+
+### Hamachi
+
+1. Install Hamachi and bring each computer online. The Linux client uses the
+   command line. After installation, run `sudo hamachi login` on Linux. [Windows download](https://vpn.net/) · [Linux download](https://vpn.net/linux)
+2. On the host, choose **Network → Create a new network**. Pick a network ID
+   and password. Friends choose **Network → Join an existing network** and
+   enter both. On Linux, the host runs `sudo hamachi create NETWORK_ID PASSWORD`.
+   Friends run `sudo hamachi join NETWORK_ID` and enter the network password.
+   [Hamachi setup guide](https://lmistatic.blob.core.windows.net/document-library/logmein/pdf/en/hamachi-getting-started-guide.pdf)
+3. Copy the host's Hamachi IPv4 address from the client or run
+   `sudo hamachi` on the Linux host. It typically starts with `25.`. Share that
+   address with your friends for the game launcher.
+
+### Tailscale
+
+1. Install Tailscale on every computer. The host signs in and sends each
+   friend an invitation from **Users → Invite external users** in the admin
+   console. Friends accept and connect their devices to that tailnet.
+   [Tailscale quickstart](https://tailscale.com/docs/how-to/quickstart) · [Invite friends](https://tailscale.com/docs/features/sharing/how-to/invite-any-user)
+2. Copy the host's `100.x.y.z` IPv4 address from **Machines** in the admin
+   console or run `tailscale ip -4` on the host.
+3. On the host, check that **Allow incoming connections** is enabled. If your
+   tailnet uses custom access rules, allow your friends to reach the host on
+   TCP `8044` for SAS3. [Incoming connection settings](https://tailscale.com/docs/features/client/manage-preferences)
+
+### ZeroTier
+
+1. Open ZeroTier Central and copy the network's 16-character **Network ID**.
+   Install ZeroTier on every computer and join that network through
+   **Join New Network** or `sudo zerotier-cli join NETWORK_ID` on Linux.
+2. In Central, open **Member Devices** and authorize the host and each friend.
+3. Copy the host's **managed IPv4 address** from the member list and share it
+   for the game launcher. [ZeroTier quickstart](https://docs.zerotier.com/quickstart/)
+
+## 2. Host or join SAS3
+
+| Host | Friends |
+| --- | --- |
+| Select **Host**, enter your own VPN IPv4 address, select **SAS: Zombie Assault 3**, and click **Host and play**. Leave the launcher open while everyone plays. | Select **Join**, enter the host's VPN IPv4 address, select **SAS: Zombie Assault 3**, and click **Join and play** after the host has started. |
+
+<img src="docs/screenshots/launcher.png" alt="Ninja Kiwi VPN launcher set to Host, with SAS3 selected and a sample VPN address entered" width="550">
+
+1. In SAS3, click **Play as guest** if the online-profile prompt appears.
+2. Choose **Play → Start → Play co-op multi player**. Everyone picks the same
+   mode, such as **Onslaught**, and clicks **Start new match**.
+3. Wait for everyone to appear in the squad list, then click
+   **Start now with these players**.
+
+![SAS3 Onslaught lobby with both players in the squad and the button to start the match](docs/screenshots/sas3-lobby.png)
+
+## Troubleshooting
+
+- **Join can't reach the host.** Check that both computers are online in the
+  same VPN network, the host clicked **Host and play**, and both selected the
+  same game. On the host, allow inbound TCP `8044` on the VPN interface for SAS3.
+  From a friend's Windows computer, run
+  `Test-NetConnection HOST_IPV4 -Port 8044` in PowerShell. On Linux, run
+  `nc -vz HOST_IPV4 8044` if netcat is installed. Replace `HOST_IPV4` with the
+  host's VPN IP.
+- **The AppImage won't open.** Run
+  `chmod +x NinjaKiwiVPN-x86_64.AppImage`. On systems without FUSE, run
+  `./NinjaKiwiVPN-x86_64.AppImage --appimage-extract-and-run`.
+- **SAS3 asks for an online profile.** Use **Play as guest**. SAS3 guest
+  progress stays in the launcher's local Flash profile.
+
+## Games and verification
+
+| Game | TCP lobby port | Verification |
+| --- | --- | --- |
+| SAS: Zombie Assault 3 | `8044` | Two-player co-op match over LAN between the packaged Linux and Windows clients |
+| Counter Snipe | `7988` | Launch smoke test |
+| SAS: Zombie Assault 4 | `8124` | Launch smoke test |
+| Bloons TD 5 Co-op | `5577` | Launch smoke test |
+| Bloons TD Battles | `4480` | Launch smoke test |
+
+The Windows test ran under Wine. The VPN setup steps are based on the providers'
+documentation. The Linux build uses Electron's `--no-sandbox` switch for
+Pepper Flash compatibility. SAS4, BTD5, and Battles can allocate additional
+match ports in the TCP `8127–31999` range.
+
+<details>
+<summary>Build from source</summary>
 
 Run `./build.sh INPUTS_DIR ARCHIVE_RESOURCES_DIR` on Linux with Python 3,
-Go 1.23 or newer, Git and unzip. Use the Steam Archive’s `resources` directory
-for the second argument. The input directory contains:
+Go 1.23 or newer, Git and unzip. Use the Steam Archive's `resources` directory
+for the second argument. Prepare the input directory with the following files.
 
 - `FlashPrivateServer/` at commit `dea193d18d00fa6e3a96a007500ec62ba13f5e3a` and the
   `app.zip` client from [FlashPrivateServer v5.2](https://github.com/GlennnM/FlashPrivateServer/releases/tag/v5.2).
@@ -49,7 +123,7 @@ for the second argument. The input directory contains:
 - `appimagetool/`, the extracted x64 [appimagetool](https://github.com/AppImage/appimagetool/releases),
   and `runtime-x86_64` from the [AppImage Type 2 runtime](https://github.com/AppImage/type2-runtime/releases).
 
-The two builds and their SHA-256 checksums are written to `dist/`.
+The builds and SHA-256 checksums go in `dist/`. With a SAS3 server running,
+check its socket policy and handshake with `python3 tests/sas3_socket.py HOST_IPV4`.
 
-With a SAS3 host running, check its socket policy and handshake with
-`python3 tests/sas3_socket.py HOST_IPV4`.
+</details>
